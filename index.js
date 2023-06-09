@@ -9,6 +9,7 @@ app.use(express.json())
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const e = require('express');
+const req = require('express/lib/request');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.df1ioxo.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   serverApi: {
@@ -61,11 +62,24 @@ async function run() {
       const user = req.body;
       const query = {email : user.email}
       const existingUser = await users.findOne(query)
-      console.log(existingUser)
       if(existingUser){
         return res.send({message: 'User Already Exist'})
       }
       const result = await users.insertOne(user)
+      res.send(result)
+    })
+
+    app.patch('/users/admin',async(req,res)=>{
+      const id = req.query.id;
+      const role = req.query.role;
+      console.log(id,role)
+      const filter = {_id: new ObjectId(id)}
+      const updatedDoc = {
+        $set: {
+          role : role
+        },
+      };
+      const result = await users.updateOne(filter,updatedDoc)
       res.send(result)
     })
 
