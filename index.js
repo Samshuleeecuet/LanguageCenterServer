@@ -10,14 +10,16 @@ app.use(cors())
 app.use(express.json())
 
 const verifyJWT = (req,res,next)=>{
-  const Usertoken = req.headers.authorization;
-  if(!Usertoken){
+  const authorization = req.headers.authorization;
+  console.log(authorization)
+  if(!authorization){
     return res.status(401).send({error: true, message: 'unauthorized access'});
   }
   // bearer token
   const token = authorization.split(' ')[1]
 
-  jwt.verify(token,process.env.ACCESS_TOKEN_SECRET, (err,decoded)=>{
+  jwt.verify(token,process.env.ACCESS_TOKEN_SECRET, function(err,decoded){
+    console.log(err)
     if(err){
       return res.status(403).send({error: true, message: 'unauthorized access'})
     }
@@ -82,7 +84,16 @@ async function run() {
     })
 
     // User send to db
-    app.get('/users',async(req,res)=>{
+    app.get('/users',verifyJWT,async(req,res)=>{
+      const email = req.query.email;
+      if(!email){
+        res.send([])
+      }
+      const decodedEmail = req.decoded.email;
+      console.log(email,decodedEmail)
+      // if(email !== decodedEmail){
+      //   return res.status(403).send({error: true, message: 'Forbidden access'})
+      // }
       const result = await users.find().toArray()
       res.send(result)
     })
