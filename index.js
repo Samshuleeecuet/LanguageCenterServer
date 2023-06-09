@@ -28,7 +28,6 @@ async function run() {
     const users = database.collection("users");
 
     // CLasses Route 
-
     app.get('/classes',async(req,res)=>{
       const result = await classes.find().toArray();
       res.send(result)
@@ -38,18 +37,28 @@ async function run() {
       const result = await classes.insertOne(myclass)
       res.send(result)
     })
-
     app.put('/classes',async(req,res)=>{
       const id = req.query.id;
       const body = req.body;
-      console.log(body)
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
         $set: {
-          status: body.status
+          status: body?.status,
+          feedback: body?.feedback
         }
       }
       const result = await classes.updateOne(filter,updatedDoc)
+      res.send(result)
+    })
+
+    // User send to db
+    app.get('/users',async(req,res)=>{
+      const result = await users.find().toArray()
+      res.send(result)
+    })
+    app.post('/users',async(req,res)=>{
+      const user = req.body;
+      const result = await users.insertOne(user)
       res.send(result)
     })
 
