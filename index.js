@@ -1,11 +1,32 @@
 const express = require('express')
 const cors = require('cors')
+const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const port = process.env.PORT || 5000 ;
-
 const app = express()
+
+// middleware
 app.use(cors())
 app.use(express.json())
+
+const verifyJWT = (req,res,next)=>{
+  const Usertoken = req.headers.authorization;
+  if(!Usertoken){
+    return res.status(401).send({error: true, message: 'unauthorized access'});
+  }
+  // bearer token
+  const token = authorization.split(' ')[1]
+
+  jwt.verify(token,process.env.ACCESS_TOKEN_SECRET, (err,decoded)=>{
+    if(err){
+      return res.status(403).send({error: true, message: 'unauthorized access'})
+    }
+    req.decoded = decoded;
+    next();
+  })
+}
+
+
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const e = require('express');
@@ -28,6 +49,13 @@ async function run() {
     const database = client.db("LanguageCenter");
     const classes = database.collection("classes");
     const users = database.collection("users");
+
+    app.post('/jwt',(req,res)=>{
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'})
+      res.send({token}) 
+    })
+
 
     // CLasses Route 
     app.get('/classes',async(req,res)=>{
