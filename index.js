@@ -8,6 +8,7 @@ app.use(cors())
 app.use(express.json())
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const e = require('express');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.df1ioxo.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   serverApi: {
@@ -58,6 +59,12 @@ async function run() {
     })
     app.post('/users',async(req,res)=>{
       const user = req.body;
+      const query = {email : user.email}
+      const existingUser = await users.findOne(query)
+      console.log(existingUser)
+      if(existingUser){
+        return res.send({message: 'User Already Exist'})
+      }
       const result = await users.insertOne(user)
       res.send(result)
     })
