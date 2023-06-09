@@ -91,9 +91,9 @@ async function run() {
       }
       const decodedEmail = req.decoded.email;
       console.log(email,decodedEmail)
-      // if(email !== decodedEmail){
-      //   return res.status(403).send({error: true, message: 'Forbidden access'})
-      // }
+      if(email !== decodedEmail){
+        return res.status(403).send({error: true, message: 'Forbidden access'})
+      }
       const result = await users.find().toArray()
       res.send(result)
     })
@@ -120,6 +120,28 @@ async function run() {
       };
       const result = await users.updateOne(filter,updatedDoc)
       res.send(result)
+    })
+
+
+    // check user as a admin or instructor or student
+
+    app.get('/users/admin/:email',verifyJWT,async(req,res)=>{
+      const email = req.params.email;
+      if(req.decoded.email !== email){
+        return res.send({Admin: false , Instructor: false, Student: false })
+      }
+      const query ={email: email}
+      const user = await users.findOne(query);
+      if(user.role === 'Admin'){
+        return res.send({Admin: true , Instructor: false ,Student: false})
+      }
+      if(user.role === 'Instructor'){
+        return res.send({Admin: false , Instructor: true ,Student: false})
+      }
+      if(user.role === 'Student'){
+        return res.send({Admin: false , Instructor: false ,Student: true})
+      }
+
     })
 
 
