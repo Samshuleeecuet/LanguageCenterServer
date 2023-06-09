@@ -7,7 +7,7 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.df1ioxo.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   serverApi: {
@@ -36,6 +36,20 @@ async function run() {
     app.post('/classes',async(req,res)=>{
       const myclass = req.body;
       const result = await classes.insertOne(myclass)
+      res.send(result)
+    })
+
+    app.put('/classes',async(req,res)=>{
+      const id = req.query.id;
+      const body = req.body;
+      console.log(body)
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status: body.status
+        }
+      }
+      const result = await classes.updateOne(filter,updatedDoc)
       res.send(result)
     })
 
