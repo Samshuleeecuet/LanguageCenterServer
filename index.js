@@ -11,7 +11,6 @@ app.use(express.json())
 
 const verifyJWT = (req,res,next)=>{
   const authorization = req.headers.authorization;
-  console.log(authorization)
   if(!authorization){
     return res.status(401).send({error: true, message: 'unauthorized access'});
   }
@@ -19,7 +18,6 @@ const verifyJWT = (req,res,next)=>{
   const token = authorization.split(' ')[1]
 
   jwt.verify(token,process.env.ACCESS_TOKEN_SECRET, function(err,decoded){
-    console.log(err)
     if(err){
       return res.status(403).send({error: true, message: 'unauthorized access'})
     }
@@ -51,6 +49,7 @@ async function run() {
     const database = client.db("LanguageCenter");
     const classes = database.collection("classes");
     const users = database.collection("users");
+    const carts = database.collection("carts");
 
     app.post('/jwt',(req,res)=>{
       const user = req.body;
@@ -63,6 +62,19 @@ async function run() {
     app.get('/classes',async(req,res)=>{
       const result = await classes.find().toArray();
       res.send(result)
+    })
+    app.get('/allclasses',async(req,res)=>{
+      const query = {status: 'Approved'}
+      const result = await classes.find(query).toArray();
+      res.send(result)
+    })
+    app.get('/instructorclasses/:email',async(req,res)=>{
+      const email = req.params.email;
+      if(email){
+        const query = {instructoremail: email}
+        const result = await classes.find(query).toArray();
+        res.send(result)
+      }
     })
     app.post('/classes',async(req,res)=>{
       const myclass = req.body;
@@ -90,7 +102,6 @@ async function run() {
         res.send([])
       }
       const decodedEmail = req.decoded.email;
-      console.log(email,decodedEmail)
       if(email !== decodedEmail){
         return res.status(403).send({error: true, message: 'Forbidden access'})
       }
@@ -121,10 +132,7 @@ async function run() {
       const result = await users.updateOne(filter,updatedDoc)
       res.send(result)
     })
-
-
     // check user as a admin or instructor or student
-
     app.get('/users/admin/:email',verifyJWT,async(req,res)=>{
       const email = req.params.email;
       if(req.decoded.email !== email){
@@ -141,6 +149,22 @@ async function run() {
       if(user.role === 'Student'){
         return res.send({Admin: false , Instructor: false ,Student: true})
       }
+
+    })
+
+
+    app.post('/addtocart',async(req,res)=>{
+      const data = req.body;
+      const purchasedEmail = data.purchasedBy;
+      const className = data.classname;
+      console.log(purchasedEmail,className)
+      const query = {purchasedBy: purchasedEmail, classname : className}
+      const found = await carts.findOne(query)
+      if(found){
+        res.send({message: 'Class Already Added'})
+      }
+      const result = await carts.insertOne(data)
+      res.send(result)
 
     })
 
