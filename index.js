@@ -95,12 +95,31 @@ async function run() {
       const result = await classes.updateOne(filter,updatedDoc)
       res.send(result)
     })
+    app.get('/updateclass/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await classes.find(query).toArray();
+      res.send(result)
+    })
+    app.patch('/updateclass/:id',async(req,res)=>{
+      const id = req.params.id;
+      const body = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set:{
+          enrollstudent: body?.enrollstudent,
+          availableseat: body?.availableseat
+        }
+      }
+      const result = await classes.updateOne(filter,updateDoc)
+      res.send(result)
+    })
 
     // User send to db
-    app.get('/users',async(req,res)=>{
+    app.get('/users',verifyJWT,async(req,res)=>{
       const email = req.query.email;
       if(!email){
-        res.send([])
+       return res.send([])
       }
       const decodedEmail = req.decoded.email;
       if(email !== decodedEmail){
@@ -158,6 +177,7 @@ async function run() {
     app.get('/carts',async(req,res)=>{
       const email = req.query.email;
       const purchase = req.query.purchase;
+      console.log(email,purchase)
       const query = {
         purchasedBy:email,
         purchase: purchase
@@ -175,6 +195,20 @@ async function run() {
         return res.send({message: 'Class Already Added'})
       }
       const result = await carts.insertOne(data)
+      res.send(result)
+    })
+    app.patch('/carts/:id',async(req,res)=>{
+      const id = req.params.id;
+      const body = req.body;
+      console.log(body)
+      const query = {classId: id}
+      const updateDoc = {
+        $set:{
+          purchase: body.purchase
+        }
+      }
+      const result = await carts.updateOne(query,updateDoc)
+      console.log(result)
       res.send(result)
     })
 
