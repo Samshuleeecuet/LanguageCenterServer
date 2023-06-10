@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const port = process.env.PORT || 5000 ;
 const app = express()
+const stripe = require('stripe')(process.env.PAYMENT_KEY)
 
 // middleware
 app.use(cors())
@@ -59,11 +60,11 @@ async function run() {
 
 
     // CLasses Route 
-    app.get('/classes',async(req,res)=>{
+    app.get('/classes',verifyJWT,async(req,res)=>{
       const result = await classes.find().toArray();
       res.send(result)
     })
-    app.get('/allclasses',async(req,res)=>{
+    app.get('/allclasses',verifyJWT,async(req,res)=>{
       const query = {status: 'Approved'}
       const result = await classes.find(query).toArray();
       res.send(result)
@@ -96,7 +97,7 @@ async function run() {
     })
 
     // User send to db
-    app.get('/users',verifyJWT,async(req,res)=>{
+    app.get('/users',async(req,res)=>{
       const email = req.query.email;
       if(!email){
         res.send([])
@@ -114,9 +115,11 @@ async function run() {
       const existingUser = await users.findOne(query)
       if(existingUser){
         return res.send({message: 'User Already Exist'})
+      }else{
+        const result = await users.insertOne(user)
+        res.send(result)
+
       }
-      const result = await users.insertOne(user)
-      res.send(result)
     })
 
     app.patch('/users/admin',async(req,res)=>{
@@ -152,23 +155,56 @@ async function run() {
 
     })
 
-
+    app.get('/carts',async(req,res)=>{
+      const email = req.query.email;
+      const purchase = req.query.purchase;
+      const query = {
+        purchasedBy:email,
+        purchase: purchase
+      }
+      const result = await carts.find(query).toArray()
+      res.json(result)
+    })
     app.post('/addtocart',async(req,res)=>{
       const data = req.body;
       const purchasedEmail = data.purchasedBy;
       const className = data.classname;
-      console.log(purchasedEmail,className)
       const query = {purchasedBy: purchasedEmail, classname : className}
       const found = await carts.findOne(query)
       if(found){
-        res.send({message: 'Class Already Added'})
+        return res.send({message: 'Class Already Added'})
       }
       const result = await carts.insertOne(data)
       res.send(result)
-
     })
 
+    app.delete('/carts/:id',async(req,res)=>{
+      const id = req.params.id;
+      const result = await carts.deleteOne({_id: new ObjectId(id)})
+      res.send(result)
+    })
 
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const totalprice = parseFloat(price.toFixed(2))
+      const amount = totalprice*100;
+      console.log(amount)
+      const paymentIntent = await stripe.paymentIntents.createBundleRenderer({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card'] 
+      });
+      res.send({
+        clientSecret: paymentIntent.clientSecret
+      })
+    })
+
+    app.get('/cartspay/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {classId:id}
+      const found = await carts.findOne(query)
+      res.send(found)
+    })
   } finally {
     //await client.close();
   }
