@@ -51,7 +51,7 @@ async function run() {
     const classes = database.collection("classes");
     const users = database.collection("users");
     const carts = database.collection("carts");
-
+    const payments = database.collection("payments");
     app.post('/jwt',(req,res)=>{
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'})
@@ -184,18 +184,17 @@ async function run() {
       res.send(result)
     })
 
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post('/create-payment-intent', verifyJWT, async (req, res) => {
       const { price } = req.body;
-      const totalprice = parseFloat(price.toFixed(2))
-      const amount = totalprice*100;
-      console.log(amount)
-      const paymentIntent = await stripe.paymentIntents.createBundleRenderer({
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: 'usd',
-        payment_method_types: ['card'] 
+        payment_method_types: ['card']
       });
+
       res.send({
-        clientSecret: paymentIntent.clientSecret
+        clientSecret: paymentIntent.client_secret
       })
     })
 
@@ -204,6 +203,12 @@ async function run() {
       const query = {classId:id}
       const found = await carts.findOne(query)
       res.send(found)
+    })
+
+    app.post('/payments', verifyJWT, async (req, res) => {
+      const payment = req.body;
+      const result = await payments.insertOne(payment);
+      res.send(result);
     })
   } finally {
     //await client.close();
