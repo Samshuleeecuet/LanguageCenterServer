@@ -64,7 +64,7 @@ async function run() {
       const result = await classes.find().toArray();
       res.send(result)
     })
-    app.get('/allclasses',verifyJWT,async(req,res)=>{
+    app.get('/allclasses',async(req,res)=>{
       const query = {status: 'Approved'}
       const result = await classes.find(query).toArray();
       res.send(result)
@@ -105,6 +105,7 @@ async function run() {
       const id = req.params.id;
       const body = req.body;
       const filter = { _id: new ObjectId(id) };
+      const found = await classes.findOne(filter);
       const updateDoc = {
         $set:{
           enrollstudent: body?.enrollstudent,
@@ -114,7 +115,6 @@ async function run() {
       const result = await classes.updateOne(filter,updateDoc)
       res.send(result)
     })
-
     // User send to db
     app.get('/users',verifyJWT,async(req,res)=>{
       const email = req.query.email;
@@ -144,7 +144,6 @@ async function run() {
     app.patch('/users/admin',async(req,res)=>{
       const id = req.query.id;
       const role = req.query.role;
-      console.log(id,role)
       const filter = {_id: new ObjectId(id)}
       const updatedDoc = {
         $set: {
@@ -173,11 +172,13 @@ async function run() {
       }
 
     })
-
+    app.get('/allinstructors',async(req,res)=>{
+      const result = await users.find({role: 'Instructor'}).toArray()
+      res.send(result)
+    })
     app.get('/carts',async(req,res)=>{
       const email = req.query.email;
       const purchase = req.query.purchase;
-      console.log(email,purchase)
       const query = {
         purchasedBy:email,
         purchase: purchase
@@ -197,27 +198,28 @@ async function run() {
       const result = await carts.insertOne(data)
       res.send(result)
     })
-    app.patch('/carts/:id',async(req,res)=>{
+    app.put('/carts/:id',async(req,res)=>{
       const id = req.params.id;
       const body = req.body;
-      console.log(body)
-      const query = {classId: id}
+      const purchase = body.purchase;
+      const email = body.email;
+      console.log('body found from put',body)
+      const query = {classId: id,purchasedBy:email}
+      console.log('Query', query)
       const updateDoc = {
         $set:{
-          purchase: body.purchase
+          purchase: purchase
         }
       }
       const result = await carts.updateOne(query,updateDoc)
-      console.log(result)
+      console.log('UpdateDoc' ,result)
       res.send(result)
     })
-
     app.delete('/carts/:id',async(req,res)=>{
       const id = req.params.id;
       const result = await carts.deleteOne({_id: new ObjectId(id)})
       res.send(result)
     })
-
     app.post('/create-payment-intent', verifyJWT, async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
@@ -231,18 +233,23 @@ async function run() {
         clientSecret: paymentIntent.client_secret
       })
     })
-
     app.get('/cartspay/:id',async(req,res)=>{
       const id = req.params.id;
       const query = {classId:id}
       const found = await carts.findOne(query)
       res.send(found)
     })
-
     app.post('/payments', verifyJWT, async (req, res) => {
       const payment = req.body;
       const result = await payments.insertOne(payment);
       res.send(result);
+    })
+    app.get('/paymenthistory/:email',verifyJWT,async(req,res)=>{
+      const email =req.params.email;
+      const query = {email:email};
+      const result = await payments.find(query).toArray();
+      res.send(result)
+
     })
   } finally {
     //await client.close();
