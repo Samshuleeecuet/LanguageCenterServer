@@ -1,12 +1,19 @@
-const express = require('express')
-const cors = require('cors')
-const jwt = require('jsonwebtoken');
 require('dotenv').config()
+const express = require('express')
+const jwt = require('jsonwebtoken');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+require('mongodb');
 const port = process.env.PORT || 5000 ;
-const app = express()
 const stripe = require('stripe')(process.env.PAYMENT_KEY)
+const app = express()
+const cors = require('cors')
 
 // middleware
+const corsOptions = {
+  origin: '*',
+  credentials: true,
+  optionSuccessStatus: 200,
+}
 app.use(cors())
 app.use(express.json())
 
@@ -28,10 +35,6 @@ const verifyJWT = (req,res,next)=>{
 }
 
 
-
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const e = require('express');
-const req = require('express/lib/request');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.df1ioxo.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   serverApi: {
@@ -42,7 +45,7 @@ const client = new MongoClient(uri, {
 });
 async function run() {
   try {
-    await client.connect();
+    // client.connect();
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
@@ -128,6 +131,14 @@ async function run() {
       const result = await users.find().toArray()
       res.send(result)
     })
+    app.get('/currentuser/:email',verifyJWT,async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        email : email
+      }
+      const result = await users.findOne(query)
+      res.send(result)
+    })
     app.post('/users',async(req,res)=>{
       const user = req.body;
       const query = {email : user.email}
@@ -140,7 +151,14 @@ async function run() {
 
       }
     })
-
+    app.delete('/deleteuser/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {
+        _id : new ObjectId(id)
+      }
+      const result = await users.deleteOne(query)
+      res.send(result)
+    })
     app.patch('/users/admin',async(req,res)=>{
       const id = req.query.id;
       const role = req.query.role;
@@ -247,9 +265,24 @@ async function run() {
     app.get('/paymenthistory/:email',verifyJWT,async(req,res)=>{
       const email =req.params.email;
       const query = {email:email};
-      const result = await payments.find(query).toArray();
+      const option = {
+        sort: {date: -1}
+      }
+      const result = await payments.find(query,option).toArray();
       res.send(result)
 
+    })
+
+    app.get('/popularclass',async(req,res)=>{
+      const result = await classes.find().sort({enrollstudent: -1}).limit(6).toArray()
+      res.send(result)
+    })
+    app.get('/popularinstructor',async(req,res)=>{
+      const query = {
+        role: 'Instructor'
+      }
+      const result = await users.find(query).limit(6).toArray()
+      res.send(result)
     })
   } finally {
     //await client.close();
